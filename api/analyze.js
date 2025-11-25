@@ -1,21 +1,20 @@
-export default async function (req) {
+// api/analyze.js
+import { createHandler } from '@vercel/node';
+
+const handler = async (req, res) => {
+  // 只允许 POST
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: '仅支持 POST 请求' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(405).json({ error: '仅支持 POST 请求' });
   }
 
   try {
-    const { base64, mode } = await req.json();
+    const { base64, mode } = req.body;
+
     if (!base64) {
-      return new Response(JSON.stringify({ error: '缺少图片数据' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(400).json({ error: '缺少图片数据' });
     }
 
-    // 🔑 第三步再回来替换这行！现在先保留
+    // 🔑 替换为你的真实 API Key！
     const API_KEY = 'AIzaSyANPBRzRSBquJgA23U5DSIk_4rCPuch--Y';
 
     const response = await fetch(
@@ -46,33 +45,28 @@ export default async function (req) {
     );
 
     if (!response.ok) {
-      return new Response(JSON.stringify({ error: 'AI 分析失败' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      console.error('Google API Error:', await response.text());
+      return res.status(500).json({ error: 'AI 分析失败，请稍后重试' });
     }
 
     const data = await response.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+
     let result;
     try {
       const jsonMatch = text.match(/```json\s*({[\s\S]*?})\s*```/);
       result = JSON.parse(jsonMatch ? jsonMatch[1] : text);
     } catch (e) {
-      return new Response(JSON.stringify({ error: '格式错误' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      console.error('JSON Parse Failed:', text);
+      return res.status(500).json({ error: 'AI 返回格式错误，请重试' });
     }
 
-    return new Response(JSON.stringify(result), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    res.status(200).json(result);
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: '服务器错误' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    console.error('Server Error:', error);
+    res.status(500).json({ error: '服务器内部错误' });
   }
-}
+};
+
+export default createHandler(handler);
