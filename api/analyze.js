@@ -16,7 +16,7 @@ export default async function (req) {
     }
 
     // 🔑 第三步再回来替换这行！现在先保留
-    const API_KEY = 'YOUR_GOOGLE_API_KEY';
+    const API_KEY = 'AIzaSyANPBRzRSBquJgA23U5DSIk_4rCPuch--Y';
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
