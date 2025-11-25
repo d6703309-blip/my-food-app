@@ -1,22 +1,20 @@
 // api/analyze.js
-import { createHandler } from '@vercel/node';
+export default async (req, res) => {
+  // 自动解析 JSON body（Vercel 会帮你处理）
+  const { base64, mode } = req.body || {};
 
-const handler = async (req, res) => {
-  // 只允许 POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: '仅支持 POST 请求' });
   }
 
+  if (!base64) {
+    return res.status(400).json({ error: '缺少图片数据' });
+  }
+
+  // 🔑 替换为你的真实 Google API Key！
+  const API_KEY = 'AIzaSyANPBRzRSBquJgA23U5DSIk_4rCPuch--Y';
+
   try {
-    const { base64, mode } = req.body;
-
-    if (!base64) {
-      return res.status(400).json({ error: '缺少图片数据' });
-    }
-
-    // 🔑 替换为你的真实 API Key！
-    const API_KEY = 'AIzaSyANPBRzRSBquJgA23U5DSIk_4rCPuch--Y';
-
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
       {
@@ -45,7 +43,8 @@ const handler = async (req, res) => {
     );
 
     if (!response.ok) {
-      console.error('Google API Error:', await response.text());
+      const errText = await response.text();
+      console.error('Google API Error:', errText);
       return res.status(500).json({ error: 'AI 分析失败，请稍后重试' });
     }
 
@@ -54,7 +53,8 @@ const handler = async (req, res) => {
 
     let result;
     try {
-      const jsonMatch = text.match(/```json\s*({[\s\S]*?})\s*```/);
+      // 尝试提取 JSON（兼容带 ```json 的情况）
+      const jsonMatch = text.match(/```(?:json)?\s*({[\s\S]*?})\s*```/);
       result = JSON.parse(jsonMatch ? jsonMatch[1] : text);
     } catch (e) {
       console.error('JSON Parse Failed:', text);
@@ -68,5 +68,3 @@ const handler = async (req, res) => {
     res.status(500).json({ error: '服务器内部错误' });
   }
 };
-
-export default createHandler(handler);
